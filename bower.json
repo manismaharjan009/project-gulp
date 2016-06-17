@@ -1,0 +1,17 @@
+{
+  "name": "gulp",
+  "description": "\"# project-gulp\"",
+  "main": "gulpfile.js",
+  "authors": [
+    "me"
+  ],
+  "license": "ISC",
+  "homepage": "https://github.com/manismaharjan009/project-gulp",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}

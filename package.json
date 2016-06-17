@@ -1,0 +1,24 @@
+{
+  "name": "gulp",
+  "version": "1.0.0",
+  "description": "\"# project-gulp\"",
+  "main": "gulpfile.js",
+  "scripts": {
+    "test": "no test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/manismaharjan009/project-gulp.git"
+  },
+  "author": "me",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/manismaharjan009/project-gulp/issues"
+  },
+  "homepage": "https://github.com/manismaharjan009/project-gulp#readme",
+  "devDependencies": {
+    "browser-sync": "^2.13.0",
+    "gulp-inject": "^4.1.0",
+    "wiredep": "^4.0.0"
+  }
+}
