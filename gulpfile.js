@@ -1,4 +1,5 @@
 var gulp = require('gulp');
+var notify =require('gulp-notify');
 var sass = require('gulp-sass');
 var sourcemaps = require('gulp-sourcemaps');
 
@@ -36,7 +37,14 @@ gulp.task('glob:variable', function(){
 gulp.task('sass', function(){
   return gulp.src('main.scss')
     .pipe(sourcemaps.init())
-    .pipe(sass())
+    .pipe(sass({
+      style: 'compressed',
+      errLogToConsole: true,
+      onError:function(err){
+        return notify(err);
+      }
+    }))
     .pipe(sourcemaps.write())
-    .pipe(gulp.dest('.'));
+    .pipe(gulp.dest('.'))
+    .pipe(notify({ message: 'Styles task complete' }));
 });
