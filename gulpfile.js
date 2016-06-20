@@ -2,6 +2,11 @@ var gulp = require('gulp');
 var notify =require('gulp-notify');
 var sass = require('gulp-sass');
 var sourcemaps = require('gulp-sourcemaps');
+var browserSync = require('browser-sync');
+var inject = require('gulp-inject');
+var jshint = require('gulp-inject');
+var wiredep = require('wiredep');
+var useref = require('gulp-useref');
 
 //Example: glob may be:
 
@@ -48,3 +53,84 @@ gulp.task('sass', function(){
     .pipe(gulp.dest('.'))
     .pipe(notify({ message: 'Styles task complete' }));
 });
+
+gulp.task('concat', function(){
+  return gulp.src('*.html')
+    .pipe(useref())
+    .pipe(gulpIf('*.js', uglify()))
+    .pipe(gulpIf('*.css', minifyCss()))
+    .pipe(gulp.dest('build'))
+});
+
+gulp.task('inject', function(){
+  return gulp.src('*.html')
+    .pipe(inject(gulp.src(['assets/css/*.css', 'assets/js/*.js'], {read:false}),{relative:true}))
+    .pipe(gulp.dest('.'));
+});
+
+gulp.task('bower', function(){
+  return gulp.src('*.html')
+  .pipe(wiredep.stream({
+    fileTypes:{
+      html:{
+        replace:{
+          js:function(filePath){
+            console.log(filePath);
+            return '<script src="' + filePath + '"></script>';
+          },
+          css: function(filePath) {
+              // return '<link rel="stylesheet" href="' + filePath + '"/>';
+              console.log(filePath);
+          }
+        }
+      }
+    }
+  }))
+  .pipe(gulp.dest('.'));
+});
+
+
+gulp.task('jshint', function(){
+  return gulp.src('assets/js/*.js')
+    .pipe(jshint())
+    .pipe(jshint.reporter('jshint-stylish'))
+    .pipe(jshint.reporter('fail'));
+});
+
+gulp.task('watch', function(){
+  gulp.watch('assets/sass/**/*.scss', ['sass']);
+  gulp.watch(['bower_components/**/*.css', 'bower_components/**/*.js'], ['bower']);
+  gulp.watch(['*.html', 'assets/css/*.css', 'assets/js/*.js'],function(event){
+    browserSync.reload();
+    console.log('css and html');
+  });
+  gulp.watch(['assets/js/*.js'],function(event){
+    console.log('js only');
+    if(isOnlyChange(event)){
+      browserSync.reload();
+      gulp.start('jshint');
+    }else{
+      gulp.start('inject');
+    }
+
+  });
+
+});
+
+function isOnlyChange(event) {
+  console.log(event);
+  return event.type === 'changed';
+}
+
+gulp.task('serve', function(){
+  browserSync.init({
+    server : {
+      baseDir : '.',
+      routes : {
+        "/bower_components" : "bower_components"
+      },
+      port : 9090,
+      ghostMode : false
+    }
+  })
+})
