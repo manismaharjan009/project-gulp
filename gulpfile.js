@@ -14,6 +14,7 @@ var revision = require('gulp-rev');
 var clean = require('gulp-clean');
 var plumber = require('gulp-plumber');
 var imagemin = require('gulp-imagemin');
+var fileinclude = require('gulp-file-include');
 
 //Example: glob may be:
 
@@ -58,39 +59,50 @@ var basePaths = {
 var paths = {
 
   html:{
-    src: basePaths.root+'*.html',
-    dest: basePaths.root,
+    src: 'src/*.html',
+    dest: basePaths.tmp,
     build: basePaths.build
+  },
+  html_partials:{
+    src: 'src/partials/*.html'
   },
   sass:{
     src: basePaths.src +'sass/**/*.scss',
-    dest: basePaths.root
+    dest: basePaths.tmp+'css/',
+    build: basePaths.build + 'css/'
   },
   css:{
     src: basePaths.src +'css/*.css',
-    dest: basePaths.dest + 'css',
-    build: basePaths.build+'css'
+    dest: basePaths.tmp+'css/',
+    build: basePaths.build+'css/'
   },
   js:{
     src: basePaths.src + 'js/*.js',
-    dest: basePaths.dest + 'js',
-    build: basePaths.build + 'js'
+    dest: basePaths.tmp + 'js/',
+    build: basePaths.build + 'js/'
   },
   images: {
     src: basePaths.src +'images/**/*.{png,jpg,gif}',
-    dest: basePaths.dest + 'images',
-    build: basePaths.build + 'images'
+    dest: basePaths.dest + 'images/',
+    build: basePaths.build + 'images/'
   },
   fonts: {
     src: [basePaths.src +'fonts/**/*', basePaths.bower+'**/fonts/*'],
-    dest: basePaths.dest + 'fonts',
-    build: basePaths.build + 'fonts'
+    dest: basePaths.dest + 'fonts/',
+    build: basePaths.build + 'fonts/'
   },
   build:{
     src: basePaths.build
   },
   bower:{
     src: basePaths.bower
+  },
+  tmp:{
+    src: basePaths.tmp + '*.html',
+    dest: basePaths.tmp,
+    css: {
+      src : basePaths.tmp + 'css/*.css'
+    }
   }
 
 
@@ -120,22 +132,22 @@ gulp.task('concat', function(){
     .pipe(gulp.dest(paths.build.src));
 });
 
-// gulp.task('revision', function () {
-// 	return gulp.src(['build/css/*.css', 'build/js/*.js'])
-// 		.pipe(revision())
-// 		.pipe(gulp.dest(paths.build));
-// });
+gulp.task('revision', function () {
+	return gulp.src(['build/css/*.css', 'build/js/*.js'])
+		.pipe(revision())
+		.pipe(gulp.dest(paths.build));
+});
 
 gulp.task('inject', function(){
-  return gulp.src(paths.html.src)
+  return gulp.src(paths.tmp.src)
     .pipe(inject(gulp.src([paths.css.src , paths.js.src], {read:false}),{relative:true}))
-    .pipe(gulp.dest(paths.html.dest));
+    .pipe(gulp.dest(paths.tmp.dest));
 });
 
 gulp.task('bower', function(){
-  return gulp.src(paths.html.src)
+  return gulp.src(paths.tmp.src)
   .pipe(wiredep.stream())
-  .pipe(gulp.dest(paths.html.dest));
+  .pipe(gulp.dest(paths.tmp.dest));
 });
 
 
@@ -146,12 +158,14 @@ gulp.task('jshint', function(){
     .pipe(jshint.reporter('fail'));
 });
 
+
+
 gulp.task('watch', function(){
   gulp.watch(paths.sass.src, ['sass']);
   gulp.watch(paths.bower+'/**/*.{css,js}', ['bower']);
-  gulp.watch([paths.html.src, paths.css.src, paths.js.src],function(event){
+  gulp.watch([paths.html.src, paths.html_partials.src, paths.css.src, paths.js.src, paths.tmp.css.src],function(event){
+    gulp.start('html-inject');
     browserSync.reload();
-    console.log('css and html');
   });
   gulp.watch([paths.js.src],function(event){
     console.log('js only');
@@ -166,10 +180,27 @@ gulp.task('watch', function(){
 
 });
 
+//gulp.watch(['app/index.html', 'app/css/*'], browserSync.reload);
+
+
 function isOnlyChange(event) {
   console.log(event);
   return event.type === 'changed';
 }
+
+
+
+gulp.task('html-inject', ['sass'], function(){
+    return gulp.src(paths.html.src)
+    .pipe(fileinclude({
+      prefix: '@@',
+      basepath: 'src/partials/'
+    }))
+    .pipe(inject(gulp.src([paths.css.src , paths.js.src, paths.tmp.css.src]), {relative:true}))
+    .pipe(wiredep.stream())
+    .pipe(gulp.dest(paths.tmp.dest))
+});
+
 
 // Task for build
 gulp.task('image-min', function(){
@@ -195,17 +226,23 @@ gulp.task('clean', function () {
 });
 
 
+
 gulp.task('build',['clean', 'image-min', 'copy-fonts', 'copy-html', 'concat']);
 
-gulp.task('serve', ['sass', 'inject', 'bower', 'watch'], function(){
+//['html-inject','sass', 'inject', 'bower', 'watch']
+
+gulp.task('serve', ['html-inject', 'watch'], function(){
   browserSync.init({
     server : {
-      baseDir : '.',
+      baseDir : '.tmp',
       routes : {
-        "/bower_components" : "bower_components"
-      },
-      port : 9090,
-      ghostMode : false
-    }
+        "/bower_components" : "bower_components",
+        "/assets": "assets",
+        "/.tmp": ".tmp"
+      }
+    },
+    ghostMode : false,
+    scrollProportionally: false,
+    port : 9091,
   })
-})
+});
