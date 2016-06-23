@@ -167,7 +167,7 @@ gulp.task('jshint', function(){
 gulp.task('watch', function(){
   gulp.watch(paths.sass.src, ['sass']);
   gulp.watch(paths.bower+'/**/*.{css,js}', ['bower']);
-  gulp.watch([paths.html.src, paths.html_partials.src, paths.css.src, paths.js.src, paths.tmp.css.src],function(event){
+  gulp.watch([paths.html.src, paths.html_partials.src, paths.css.src, paths.js.src, paths.sass.src],function(event){
     gulp.start('html-inject');
     browserSync.reload();
   });
@@ -209,8 +209,8 @@ gulp.task('concat', function(){
   return gulp.src(paths.tmp.src)
     .pipe(useref())
     .pipe(gulpIf('*.js', uglify()))
-    .pipe(gulpIf('*.css', minifyCss()))
-    // .pipe(autoprefixer('last 2 version', 'safari 5', 'ie 8', 'ie 9'))
+    .pipe(gulpIf('*.css', minifyCss(), uncss({html:[paths.html.src, paths.html_partials.src]})))
+    .pipe(autoprefixer('last 2 version', 'safari 5', 'ie 8', 'ie 9'))
     .pipe(gulp.dest(paths.build.src));
 });
 
@@ -272,7 +272,7 @@ gulp.task('build:watch', function(){
 gulp.task('build', sequence('clean', 'image-min', 'copy-fonts', 'concat','html-minify'));
 
 
-gulp.task('serve', ['clean-all', 'html-inject', 'watch'], function(){
+gulp.task('serve', ['html-inject', 'watch'], function(){
   browserSync.init({
     server : {
       baseDir : '.tmp',
