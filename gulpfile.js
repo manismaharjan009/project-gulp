@@ -10,6 +10,7 @@ var useref       = require('gulp-useref');
 var autoprefixer = require('gulp-autoprefixer');
 var gulpIf       = require('gulp-if');
 var minifyCss    = require('gulp-minify-css');
+var uncss = require('gulp-uncss')
 var uglify       = require('gulp-uglify');
 var rev          = require('gulp-rev');
 var clean        = require('gulp-clean');
@@ -209,7 +210,7 @@ gulp.task('concat', function(){
     .pipe(useref())
     .pipe(gulpIf('*.js', uglify()))
     .pipe(gulpIf('*.css', minifyCss()))
-    .pipe(autoprefixer('last 2 version', 'safari 5', 'ie 8', 'ie 9'))
+    // .pipe(autoprefixer('last 2 version', 'safari 5', 'ie 8', 'ie 9'))
     .pipe(gulp.dest(paths.build.src));
 });
 
@@ -243,6 +244,11 @@ gulp.task('clean', function () {
 		.pipe(clean());
 });
 
+gulp.task('clean-all', function () {
+	return gulp.src([paths.build.src, basePaths.tmp], {read: false})
+		.pipe(clean());
+});
+
 gulp.task('build:watch', function(){
   gulp.watch(paths.sass.src, ['sass','concat']);
   gulp.watch(paths.bower+'/**/*.{css,js}', ['bower','concat']);
@@ -266,7 +272,7 @@ gulp.task('build:watch', function(){
 gulp.task('build', sequence('clean', 'image-min', 'copy-fonts', 'concat','html-minify'));
 
 
-gulp.task('serve', ['html-inject', 'watch'], function(){
+gulp.task('serve', ['clean-all', 'html-inject', 'watch'], function(){
   browserSync.init({
     server : {
       baseDir : '.tmp',
@@ -282,7 +288,7 @@ gulp.task('serve', ['html-inject', 'watch'], function(){
   })
 });
 
-gulp.task('serve:build', ['build','build:watch'], function(){
+gulp.task('serve:build', ['clean-all', 'build','build:watch'], function(){
   browserSync.init({
     server : {
       baseDir : 'build',
