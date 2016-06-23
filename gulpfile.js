@@ -1,20 +1,29 @@
-var gulp = require('gulp');
-var notify =require('gulp-notify');
-var sass = require('gulp-sass');
-var sourcemaps = require('gulp-sourcemaps');
-var browserSync = require('browser-sync');
-var inject = require('gulp-inject');
-var jshint = require('gulp-inject');
-var wiredep = require('wiredep');
-var useref = require('gulp-useref');
-var gulpIf      = require('gulp-if');
-var minifyCss   = require('gulp-minify-css');
-var uglify      = require('gulp-uglify');
-var revision = require('gulp-rev');
-var clean = require('gulp-clean');
-var plumber = require('gulp-plumber');
-var imagemin = require('gulp-imagemin');
-var fileinclude = require('gulp-file-include');
+var gulp         = require('gulp');
+var notify       = require('gulp-notify');
+var sass         = require('gulp-sass');
+var sourcemaps   = require('gulp-sourcemaps');
+var browserSync  = require('browser-sync');
+var inject       = require('gulp-inject');
+var jshint       = require('gulp-jshint');
+var wiredep      = require('wiredep');
+var useref       = require('gulp-useref');
+var autoprefixer = require('gulp-autoprefixer');
+var gulpIf       = require('gulp-if');
+var minifyCss    = require('gulp-minify-css');
+var uglify       = require('gulp-uglify');
+var rev          = require('gulp-rev');
+var clean        = require('gulp-clean');
+var htmlmin      = require('gulp-htmlmin');
+var plumber      = require('gulp-plumber');
+var imagemin     = require('gulp-imagemin');
+var flatten      = require('gulp-flatten');
+var fileInclude  = require('gulp-file-include');
+var sequence     = require('gulp-sequence');
+
+
+// var $ = require('gulp-load-plugins')({
+//   pattern: ['gulp-*', 'wiredep','browser-sync']
+// });
 
 //Example: glob may be:
 
@@ -87,7 +96,7 @@ var paths = {
     build: basePaths.build + 'images/'
   },
   fonts: {
-    src: [basePaths.src +'fonts/**/*', basePaths.bower+'**/fonts/*'],
+    src: [basePaths.src +'fonts/**/*.{eot,svg,ttf,woff}', basePaths.bower+'**/fonts/**/*.{eot,svg,ttf,woff}'],
     dest: basePaths.dest + 'fonts/',
     build: basePaths.build + 'fonts/'
   },
@@ -121,20 +130,14 @@ gulp.task('sass', function(){
     }))
     .pipe(sourcemaps.write())
     .pipe(gulp.dest(paths.sass.dest))
-    .pipe(notify({ message: 'Compiled Successfully' }));
+    // .pipe(notify({ message: 'Compiled Successfully' }));
 });
 
-gulp.task('concat', function(){
-  return gulp.src(paths.html.src)
-    .pipe(useref())
-    .pipe(gulpIf('*.js', uglify()))
-    .pipe(gulpIf('*.css', minifyCss()))
-    .pipe(gulp.dest(paths.build.src));
-});
+
 
 gulp.task('revision', function () {
 	return gulp.src(['build/css/*.css', 'build/js/*.js'])
-		.pipe(revision())
+		.pipe(rev())
 		.pipe(gulp.dest(paths.build));
 });
 
@@ -180,8 +183,6 @@ gulp.task('watch', function(){
 
 });
 
-//gulp.watch(['app/index.html', 'app/css/*'], browserSync.reload);
-
 
 function isOnlyChange(event) {
   console.log(event);
@@ -192,7 +193,7 @@ function isOnlyChange(event) {
 
 gulp.task('html-inject', ['sass'], function(){
     return gulp.src(paths.html.src)
-    .pipe(fileinclude({
+    .pipe(fileInclude({
       prefix: '@@',
       basepath: 'src/partials/'
     }))
@@ -203,6 +204,15 @@ gulp.task('html-inject', ['sass'], function(){
 
 
 // Task for build
+gulp.task('concat', function(){
+  return gulp.src(paths.tmp.src)
+    .pipe(useref())
+    .pipe(gulpIf('*.js', uglify()))
+    .pipe(gulpIf('*.css', minifyCss()))
+    .pipe(autoprefixer('last 2 version', 'safari 5', 'ie 8', 'ie 9'))
+    .pipe(gulp.dest(paths.build.src));
+});
+
 gulp.task('image-min', function(){
   return gulp.src(paths.images.src)
     .pipe(plumber())
@@ -212,24 +222,49 @@ gulp.task('image-min', function(){
 
 gulp.task('copy-fonts', function() {
   return gulp.src(paths.fonts.src)
-  .pipe(gulp.dest(paths.fonts.build));
+    .pipe(flatten())
+    .pipe(gulp.dest(paths.fonts.build));
 })
 
 gulp.task('copy-html', function() {
-  return gulp.src(paths.html.src)
-  .pipe(gulp.dest(paths.html.build));
+  return gulp.src(paths.tmp.src)
+    .pipe(htmlmin({collapseWhitespace: true}))
+    .pipe(gulp.dest(paths.html.build));
+});
+
+gulp.task('html-minify', function(){
+  return gulp.src(paths.build.src+'*.html')
+    .pipe(htmlmin({collapseWhitespace: true}))
+    .pipe(gulp.dest(paths.html.build));
 });
 
 gulp.task('clean', function () {
-	return gulp.src(paths.build, {read: false})
+	return gulp.src(paths.build.src, {read: false})
 		.pipe(clean());
 });
 
+gulp.task('build:watch', function(){
+  gulp.watch(paths.sass.src, ['sass','concat']);
+  gulp.watch(paths.bower+'/**/*.{css,js}', ['bower','concat']);
+  gulp.watch([paths.html.src, paths.html_partials.src, paths.css.src, paths.js.src, paths.tmp.css.src],function(event){
+    gulp.start('html-inject');
+    gulp.start('concat');
+    browserSync.reload();
+  });
+  gulp.watch([paths.js.src],function(event){
+    console.log('js only');
+    if(isOnlyChange(event)){
+      browserSync.reload();
+      gulp.start('jshint');
+    }else{
+      gulp.start('inject');
+    }
 
+  });
+});
 
-gulp.task('build',['clean', 'image-min', 'copy-fonts', 'copy-html', 'concat']);
+gulp.task('build', sequence('clean', 'image-min', 'copy-fonts', 'concat','html-minify'));
 
-//['html-inject','sass', 'inject', 'bower', 'watch']
 
 gulp.task('serve', ['html-inject', 'watch'], function(){
   browserSync.init({
@@ -244,5 +279,19 @@ gulp.task('serve', ['html-inject', 'watch'], function(){
     ghostMode : false,
     scrollProportionally: false,
     port : 9091,
+  })
+});
+
+gulp.task('serve:build', ['build','build:watch'], function(){
+  browserSync.init({
+    server : {
+      baseDir : 'build',
+      routes : {
+
+      }
+    },
+    ghostMode : false,
+    scrollProportionally: false,
+    port : 6090,
   })
 });

@@ -1,9 +1,13 @@
 h2{
-  color: blue;;
+  color: cadetblue;
+}
+
+.jumbotron h1{
+  color: cadetblue;
 }
 
 
-@import "partials/variables";
-@import "partials/mixins";
-
-@import "partials/buttons";
+// @import "partials/variables";
+// @import "partials/mixins";
+//
+// @import "partials/buttons";
