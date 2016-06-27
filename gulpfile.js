@@ -10,7 +10,7 @@ var useref       = require('gulp-useref');
 var autoprefixer = require('gulp-autoprefixer');
 var gulpIf       = require('gulp-if');
 var minifyCss    = require('gulp-minify-css');
-var uncss = require('gulp-uncss')
+var uncss        = require('gulp-uncss');
 var uglify       = require('gulp-uglify');
 var rev          = require('gulp-rev');
 var clean        = require('gulp-clean');
@@ -23,7 +23,10 @@ var sequence     = require('gulp-sequence');
 
 
 // var $ = require('gulp-load-plugins')({
-//   pattern: ['gulp-*', 'wiredep','browser-sync']
+//   pattern: ['gulp-*', 'wiredep','browser-sync'],
+    // rename:{
+    //   'gulp-if' : "gulpIf"
+    // }
 // });
 
 //Example: glob may be:
@@ -126,10 +129,12 @@ gulp.task('sass', function(){
   return gulp.src(paths.sass.src)
     .pipe(sourcemaps.init())
     .pipe(sass())
+    .pipe(autoprefixer('last 2 version', 'safari 5', 'ie 8', 'ie 9'))
     .on("error", notify.onError(function (error) {
       return error.message;
     }))
     .pipe(sourcemaps.write())
+
     .pipe(gulp.dest(paths.sass.dest))
     // .pipe(notify({ message: 'Compiled Successfully' }));
 });
@@ -150,9 +155,25 @@ gulp.task('inject', function(){
 
 gulp.task('bower', function(){
   return gulp.src(paths.tmp.src)
-  .pipe(wiredep.stream())
+  .pipe(wiredep.stream({
+    fileTypes: {
+      html: {
+        replace: {
+          js: function(filePath) {
+            console.log(filePath);
+            return '<script src="' + filePath + '"></script>';
+          },
+          css: function(filePath) {
+            return '<link rel="stylesheet" href="' + filePath + '"/>';
+
+          }
+        }
+      }
+    }
+  }))
   .pipe(gulp.dest(paths.tmp.dest));
 });
+
 
 
 gulp.task('jshint', function(){
@@ -199,7 +220,22 @@ gulp.task('html-inject', ['sass'], function(){
       basepath: 'src/partials/'
     }))
     .pipe(inject(gulp.src([paths.css.src , paths.js.src, paths.tmp.css.src]), {relative:true}))
-    .pipe(wiredep.stream())
+    .pipe(wiredep.stream({
+      fileTypes: {
+        html: {
+          replace: {
+            js: function(filePath) {
+              console.log(filePath);
+              return '<script src="' + filePath + '"></script>';
+            },
+            css: function(filePath) {
+              return '<link rel="stylesheet" href="' + filePath + '"/>';
+
+            }
+          }
+        }
+      }
+    }))
     .pipe(gulp.dest(paths.tmp.dest))
 });
 
@@ -210,7 +246,6 @@ gulp.task('concat', function(){
     .pipe(useref())
     .pipe(gulpIf('*.js', uglify()))
     .pipe(gulpIf('*.css', minifyCss(), uncss({html:[paths.html.src, paths.html_partials.src]})))
-    .pipe(autoprefixer('last 2 version', 'safari 5', 'ie 8', 'ie 9'))
     .pipe(gulp.dest(paths.build.src));
 });
 
